@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 
+	"github.com/btcs-longnp/b/contracts/btc_zombie"
+	"github.com/btcs-longnp/b/event_handler"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -17,9 +18,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	contractAddress := common.HexToAddress("0xE1aBa35771C24837F660430B0bf54c847bA18049")
+	btcZombieJsonAbi, err := btc_zombie.ReadAbiJson()
+	if err != nil {
+		log.Fatal(err)
+	}
+	btcZombieEventHandler := event_handler.NewSmartContractEventHandler("0xE1aBa35771C24837F660430B0bf54c847bA18049", btcZombieJsonAbi)
+
 	query := ethereum.FilterQuery{
-		Addresses: []common.Address{contractAddress},
+		Addresses: []common.Address{btcZombieEventHandler.Address},
 	}
 
 	logs := make(chan types.Log)
@@ -28,14 +34,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println("Listening event...")
+	log.Println("Listening event from smart contract address " + btcZombieEventHandler.Address.String())
 
 	for {
 		select {
 		case err := <-sub.Err():
 			log.Fatal(err)
 		case vLog := <-logs:
-			fmt.Println(vLog.Topics[0]) // pointer to event log
+			btcZombieEventHandler.HandleLog(vLog)
 		}
 	}
 }
